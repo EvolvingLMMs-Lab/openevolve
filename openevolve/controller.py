@@ -346,6 +346,8 @@ class OpenEvolve:
                         break
 
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 logger.error(f"Error in iteration {i+1}: {str(e)}")
                 continue
 

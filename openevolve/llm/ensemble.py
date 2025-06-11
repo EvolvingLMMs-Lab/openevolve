@@ -13,7 +13,7 @@ from openevolve.llm.openai import OpenAILLM
 from openevolve.config import LLMModelConfig
 from pymongo import AsyncMongoClient
 import os
-from datetime import datetime
+import datetime
 
 
 
@@ -59,12 +59,13 @@ class LLMEnsemble:
         """Generate text using a randomly selected model based on weights"""
         model = self._sample_model()
         result = await model.generate(prompt, **kwargs)
-        await self.client.llm_responses.insert_one({
+        await self.client.llm_responses.responses.insert_one({
             "model": model.model,
             "prompt": prompt,
             "result": result,
-            "created_at": datetime.now(),
-            "configs": kwargs
+            "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
+            "configs": kwargs,
+            "source": "openevolve"
         })
         return result
 
@@ -74,14 +75,19 @@ class LLMEnsemble:
         """Generate text using a system message and conversational context"""
         model = self._sample_model()
         result = await model.generate_with_context(system_message, messages, **kwargs)
-        await self.client.llm_responses.insert_one({
-            "model": model.model,
-            "system_message": system_message,
-            "messages": messages,
-            "result": result,
-            "created_at": datetime.now(),
-            "configs": kwargs
-        })
+        try:
+            await self.client.llm_responses.responses.insert_one({
+                "model": model.model,
+                "system_message": system_message,
+                "messages": messages,
+                "result": result,
+                "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                "configs": kwargs,
+                "source": "openevolve"
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
         return result
 
     def _sample_model(self) -> LLMInterface:
