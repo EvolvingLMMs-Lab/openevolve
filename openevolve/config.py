@@ -18,7 +18,13 @@ class LLMModelConfig:
     api_base: str = None
     api_key: Optional[str] = None
     name: str = None
-    provider: Optional[str] = 'openai'  # 'openai' or 'gemini'
+    # provider: Optional[str] = 'openai'  # 'openai' or 'gemini'
+
+    @property
+    def provider(self) -> str:
+        if self.name and self.name.startswith("gemini"):
+            return "gemini"
+        return "openai"
 
     # Weight for model in ensemble
     weight: float = 1.0

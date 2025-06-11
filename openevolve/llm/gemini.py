@@ -111,14 +111,9 @@ class GeminiLLM(LLMInterface):
 
     async def _call_api(self, prompt: str, generation_config: types.GenerateContentConfig) -> str:
         """Make the actual API call"""
-        # Use asyncio to run the blocking API call in a thread pool
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None, 
-            lambda: self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=generation_config
-            )
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt,
+            config=generation_config
         )
         return response.text

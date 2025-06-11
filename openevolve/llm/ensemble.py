@@ -11,6 +11,11 @@ from openevolve.llm.base import LLMInterface
 from openevolve.llm.gemini import GeminiLLM
 from openevolve.llm.openai import OpenAILLM
 from openevolve.config import LLMModelConfig
+from pymongo import AsyncMongoClient
+import os
+import datetime
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +35,12 @@ class LLMEnsemble:
             else: # default fallback to openai
                 # Default to OpenAI for backward compatibility
                 self.models.append(OpenAILLM(model_cfg))
+        
+        mongodb_uri = os.getenv('MONGODB_URI')
+        logger.info(f"MONGODB_URI: {mongodb_uri}")
+        if not mongodb_uri:
+            raise ValueError("MONGODB_URI is not set")
+        self.client = AsyncMongoClient(mongodb_uri)
 
         # Extract and normalize model weights
         self.weights = [model.weight for model in models_cfg]
@@ -47,14 +58,37 @@ class LLMEnsemble:
     async def generate(self, prompt: str, **kwargs) -> str:
         """Generate text using a randomly selected model based on weights"""
         model = self._sample_model()
-        return await model.generate(prompt, **kwargs)
+        result = await model.generate(prompt, **kwargs)
+        await self.client.llm_responses.responses.insert_one({
+            "model": model.model,
+            "prompt": prompt,
+            "result": result,
+            "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
+            "configs": kwargs,
+            "source": "openevolve"
+        })
+        return result
 
     async def generate_with_context(
         self, system_message: str, messages: List[Dict[str, str]], **kwargs
     ) -> str:
         """Generate text using a system message and conversational context"""
         model = self._sample_model()
-        return await model.generate_with_context(system_message, messages, **kwargs)
+        result = await model.generate_with_context(system_message, messages, **kwargs)
+        try:
+            await self.client.llm_responses.responses.insert_one({
+                "model": model.model,
+                "system_message": system_message,
+                "messages": messages,
+                "result": result,
+                "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                "configs": kwargs,
+                "source": "openevolve"
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+        return result
 
     def _sample_model(self) -> LLMInterface:
         """Sample a model from the ensemble based on weights"""

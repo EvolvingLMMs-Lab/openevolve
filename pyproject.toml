@@ -19,6 +19,7 @@ dependencies = [
     "numpy>=1.22.0",
     "tqdm>=4.64.0",
     "flask",
+    "dotenv>=0.9.9",
 ]
 
 [project.optional-dependencies]
