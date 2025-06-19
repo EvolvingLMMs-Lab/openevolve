@@ -16,7 +16,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import traceback
-
+import datetime
 from openevolve.config import EvaluatorConfig
 from openevolve.database import ProgramDatabase
 from openevolve.evaluation_result import EvaluationResult
@@ -121,6 +121,9 @@ class Evaluator:
             with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as temp_file:
                 temp_file.write(program_code.encode("utf-8"))
                 temp_file_path = temp_file.name
+
+            with open(f"logs/{datetime.datetime.now(tz=datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d_%H-%M-%S')}.py", "w") as f:
+                f.write(program_code)
 
             try:
                 # Run evaluation

@@ -56,3 +56,4 @@ problems
 
 .env
 run/
+logs/
