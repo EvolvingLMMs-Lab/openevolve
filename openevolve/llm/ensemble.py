@@ -13,8 +13,11 @@ from openevolve.llm.openai import OpenAILLM
 from openevolve.config import LLMModelConfig
 from pymongo import AsyncMongoClient
 import os
+import dotenv
 import datetime
 
+
+dotenv.load_dotenv()
 
 
 logger = logging.getLogger(__name__)
