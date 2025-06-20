@@ -122,7 +122,10 @@ class Evaluator:
                 temp_file.write(program_code.encode("utf-8"))
                 temp_file_path = temp_file.name
 
-            with open(f"logs/{datetime.datetime.now(tz=datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d_%H-%M-%S')}.py", "w") as f:
+            with open(
+                f"logs/{datetime.datetime.now(tz=datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d_%H-%M-%S')}.py",
+                "w",
+            ) as f:
                 f.write(program_code)
 
             try:

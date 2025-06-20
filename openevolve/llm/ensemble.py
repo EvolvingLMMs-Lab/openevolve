@@ -33,13 +33,13 @@ class LLMEnsemble:
         self.models = []
         for model_cfg in models_cfg:
             # Determine model type based on provider or model name
-            if hasattr(model_cfg, 'provider') and model_cfg.provider == 'gemini':
+            if hasattr(model_cfg, "provider") and model_cfg.provider == "gemini":
                 self.models.append(GeminiLLM(model_cfg))
-            else: # default fallback to openai
+            else:  # default fallback to openai
                 # Default to OpenAI for backward compatibility
                 self.models.append(OpenAILLM(model_cfg))
-        
-        mongodb_uri = os.getenv('MONGODB_URI')
+
+        mongodb_uri = os.getenv("MONGODB_URI")
         logger.info(f"MONGODB_URI: {mongodb_uri}")
         if not mongodb_uri:
             raise ValueError("MONGODB_URI is not set")
@@ -62,14 +62,16 @@ class LLMEnsemble:
         """Generate text using a randomly selected model based on weights"""
         model = self._sample_model()
         result = await model.generate(prompt, **kwargs)
-        await self.client.llm_responses.responses.insert_one({
-            "model": model.model,
-            "prompt": prompt,
-            "result": result,
-            "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
-            "configs": kwargs,
-            "source": "openevolve"
-        })
+        await self.client.llm_responses.responses.insert_one(
+            {
+                "model": model.model,
+                "prompt": prompt,
+                "result": result,
+                "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                "configs": kwargs,
+                "source": "openevolve",
+            }
+        )
         return result
 
     async def generate_with_context(
@@ -79,17 +81,20 @@ class LLMEnsemble:
         model = self._sample_model()
         result = await model.generate_with_context(system_message, messages, **kwargs)
         try:
-            await self.client.llm_responses.responses.insert_one({
-                "model": model.model,
-                "system_message": system_message,
-                "messages": messages,
-                "result": result,
-                "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
-                "configs": kwargs,
-                "source": "openevolve"
-            })
+            await self.client.llm_responses.responses.insert_one(
+                {
+                    "model": model.model,
+                    "system_message": system_message,
+                    "messages": messages,
+                    "result": result,
+                    "created_at": datetime.datetime.now(tz=datetime.timezone.utc),
+                    "configs": kwargs,
+                    "source": "openevolve",
+                }
+            )
         except Exception as e:
             import traceback
+
             traceback.print_exc()
         return result
 
