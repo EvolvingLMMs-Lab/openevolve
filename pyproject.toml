@@ -28,6 +28,7 @@ dev = [
     "black>=22.0.0",
     "isort>=5.10.0",
     "mypy>=0.950",
+    "pymongo>=4.13.0",
 ]
 
 [tool.black]
