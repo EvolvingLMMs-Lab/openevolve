@@ -10,6 +10,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+import traceback
 
 from openevolve.config import Config, load_config
 from openevolve.database import Program, ProgramDatabase
@@ -30,6 +31,34 @@ from openevolve.utils.format_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _format_metrics(metrics: Dict[str, Any]) -> str:
+    """Safely format metrics, handling both numeric and string values"""
+    formatted_parts = []
+    for name, value in metrics.items():
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            try:
+                formatted_parts.append(f"{name}={value:.4f}")
+            except (ValueError, TypeError):
+                formatted_parts.append(f"{name}={value}")
+        else:
+            formatted_parts.append(f"{name}={value}")
+    return ", ".join(formatted_parts)
+
+
+def _format_improvement(improvement: Dict[str, Any]) -> str:
+    """Safely format improvement metrics"""
+    formatted_parts = []
+    for name, diff in improvement.items():
+        if isinstance(diff, (int, float)) and not isinstance(diff, bool):
+            try:
+                formatted_parts.append(f"{name}={diff:+.4f}")
+            except (ValueError, TypeError):
+                formatted_parts.append(f"{name}={diff}")
+        else:
+            formatted_parts.append(f"{name}={diff}")
+    return ", ".join(formatted_parts)
 
 
 class OpenEvolve:
@@ -114,6 +143,7 @@ class OpenEvolve:
             evaluation_file,
             self.llm_evaluator_ensemble,
             self.evaluator_prompt_sampler,
+            database=self.database,
         )
 
         logger.info(f"Initialized OpenEvolve with {initial_program_path} " f"and {evaluation_file}")
@@ -307,9 +337,29 @@ class OpenEvolve:
                 # Add to database (will be added to current island)
                 self.database.add(child_program, iteration=i + 1)
 
+                # Log prompts
+                self.database.log_prompt(
+                    template_key=(
+                        "full_rewrite_user" if self.config.allow_full_rewrites else "diff_user"
+                    ),
+                    program_id=child_id,
+                    prompt=prompt,
+                    responses=[llm_response],
+                )
+
                 # Store artifacts if they exist
                 if artifacts:
                     self.database.store_artifacts(child_id, artifacts)
+
+                # Log prompts
+                self.database.log_prompt(
+                    template_key=(
+                        "full_rewrite_user" if self.config.allow_full_rewrites else "diff_user"
+                    ),
+                    program_id=child_id,
+                    prompt=prompt,
+                    responses=[llm_response],
+                )
 
                 # Increment generation for current island
                 self.database.increment_island_generation()
@@ -340,15 +390,26 @@ class OpenEvolve:
 
                 # Check if target score reached
                 if target_score is not None:
-                    avg_score = sum(child_metrics.values()) / max(1, len(child_metrics))
-                    if avg_score >= target_score:
-                        logger.info(f"Target score {target_score} reached after {i+1} iterations")
-                        break
+                    # Only consider numeric metrics for target score calculation
+                    numeric_metrics = [
+                        v
+                        for v in child_metrics.values()
+                        if isinstance(v, (int, float)) and not isinstance(v, bool)
+                    ]
+                    if numeric_metrics:
+                        avg_score = sum(numeric_metrics) / len(numeric_metrics)
+                        if avg_score >= target_score:
+                            logger.info(
+                                f"Target score {target_score} reached after {i+1} iterations"
+                            )
+                            break
 
             except Exception as e:
                 import traceback
+
                 traceback.print_exc()
                 logger.error(f"Error in iteration {i+1}: {str(e)}")
+                traceback.print_exc()
                 continue
 
         # Get the best program using our tracking mechanism
@@ -390,7 +451,7 @@ class OpenEvolve:
             )
 
             # Save the best program (using our tracked best program)
-            self._save_best_program()
+            self._save_best_program(best_program)
 
             return best_program
         else:

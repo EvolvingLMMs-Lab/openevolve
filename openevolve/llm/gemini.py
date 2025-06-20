@@ -53,11 +53,11 @@ class GeminiLLM(LLMInterface):
         # Format the conversation for Gemini
         # Gemini doesn't have explicit system messages, so we prepend it to the first user message
         formatted_content = []
-        
+
         # Add system message as the first part of the conversation
         if system_message:
             formatted_content.append(f"System: {system_message}\n\n")
-        
+
         # Add conversation history
         for msg in messages:
             role = msg["role"]
@@ -69,7 +69,7 @@ class GeminiLLM(LLMInterface):
             else:
                 # Handle any other roles as user messages
                 formatted_content.append(f"{role}: {content}")
-        
+
         # Join all parts into a single prompt
         full_prompt = "\n\n".join(formatted_content)
 
@@ -88,8 +88,7 @@ class GeminiLLM(LLMInterface):
         for attempt in range(retries + 1):
             try:
                 response = await asyncio.wait_for(
-                    self._call_api(full_prompt, generation_config), 
-                    timeout=timeout
+                    self._call_api(full_prompt, generation_config), timeout=timeout
                 )
                 return response
             except asyncio.TimeoutError:
@@ -112,8 +111,6 @@ class GeminiLLM(LLMInterface):
     async def _call_api(self, prompt: str, generation_config: types.GenerateContentConfig) -> str:
         """Make the actual API call"""
         response = await self.client.aio.models.generate_content(
-            model=self.model,
-            contents=prompt,
-            config=generation_config
+            model=self.model, contents=prompt, config=generation_config
         )
         return response.text
